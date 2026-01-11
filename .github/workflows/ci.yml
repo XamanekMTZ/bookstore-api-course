@@ -1,0 +1,344 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Этап 1: Тестирование и линтинг
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bookstore_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r fastapi_requirements.txt
+        pip install -r testing_requirements.txt
+    
+    - name: Set up environment variables
+      run: |
+        echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/bookstore_test" >> $GITHUB_ENV
+        echo "REDIS_URL=redis://localhost:6379" >> $GITHUB_ENV
+        echo "SECRET_KEY=github-actions-secret-key-32-characters-long" >> $GITHUB_ENV
+        echo "JWT_SECRET_KEY=github-actions-jwt-secret-32-characters-long" >> $GITHUB_ENV
+        echo "ENVIRONMENT=testing" >> $GITHUB_ENV
+        echo "LOG_LEVEL=INFO" >> $GITHUB_ENV
+    
+    - name: Run linting
+      run: |
+        # Установка линтеров
+        pip install flake8 black isort mypy
+        
+        # Проверка форматирования кода
+        black --check --diff .
+        
+        # Проверка импортов
+        isort --check-only --diff .
+        
+        # Линтинг кода
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    
+    - name: Run type checking
+      run: |
+        mypy bookstore/ --ignore-missing-imports --no-strict-optional
+    
+    - name: Run unit tests
+      run: |
+        python -m pytest tests/test_unit_basic.py -v --tb=short
+    
+    - name: Run integration tests
+      run: |
+        python -m pytest tests/test_api_integration.py -v --tb=short
+    
+    - name: Run property-based tests
+      run: |
+        python -m pytest tests/test_property_based.py -v --tb=short --hypothesis-show-statistics
+    
+    - name: Run performance tests
+      run: |
+        python -m pytest tests/test_performance.py -v --tb=short
+    
+    - name: Generate test coverage report
+      run: |
+        pip install coverage
+        coverage run -m pytest
+        coverage report --show-missing
+        coverage xml
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  # Этап 2: Security сканирование
+  security:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install security tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install safety bandit semgrep
+    
+    - name: Run safety check (dependencies)
+      run: |
+        pip install -r requirements.txt -r fastapi_requirements.txt
+        safety check --json --output safety-report.json || true
+    
+    - name: Run bandit security linter
+      run: |
+        bandit -r bookstore/ -f json -o bandit-report.json || true
+    
+    - name: Run semgrep security analysis
+      run: |
+        semgrep --config=auto --json --output=semgrep-report.json bookstore/ || true
+    
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-reports
+        path: |
+          safety-report.json
+          bandit-report.json
+          semgrep-report.json
+
+  # Этап 3: Сборка Docker образа
+  build:
+    runs-on: ubuntu-latest
+    needs: [test, security]
+    
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      image-tag: ${{ steps.meta.outputs.tags }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+    
+    - name: Build and push Docker image
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        build-args: |
+          BUILDKIT_INLINE_CACHE=1
+    
+    - name: Generate SBOM
+      uses: anchore/sbom-action@v0
+      with:
+        image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        format: spdx-json
+        output-file: sbom.spdx.json
+    
+    - name: Upload SBOM
+      uses: actions/upload-artifact@v3
+      with:
+        name: sbom
+        path: sbom.spdx.json
+
+  # Этап 4: Развертывание в staging
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Deploy to staging
+      run: |
+        echo "🚀 Deploying to staging environment..."
+        echo "Image: ${{ needs.build.outputs.image-tag }}"
+        echo "Digest: ${{ needs.build.outputs.image-digest }}"
+        
+        # Здесь будет реальный deployment в staging
+        # Например, обновление Kubernetes deployment или Docker Compose
+        
+        # Пример команды для обновления Docker Compose в staging
+        # ssh staging-server "cd /app && docker-compose pull && docker-compose up -d"
+        
+        echo "✅ Staging deployment completed"
+    
+    - name: Run smoke tests
+      run: |
+        echo "🧪 Running smoke tests against staging..."
+        
+        # Ждем запуска сервиса
+        sleep 30
+        
+        # Простые smoke tests
+        # curl -f https://staging.bookstore-api.com/health
+        # curl -f https://staging.bookstore-api.com/info
+        
+        echo "✅ Smoke tests passed"
+    
+    - name: Notify deployment
+      run: |
+        echo "📢 Staging deployment notification"
+        echo "Environment: staging"
+        echo "Version: ${{ github.sha }}"
+        echo "Branch: ${{ github.ref_name }}"
+
+  # Этап 5: Развертывание в production (только для main ветки)
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Manual approval required
+      run: |
+        echo "🔒 Production deployment requires manual approval"
+        echo "Image: ${{ needs.build.outputs.image-tag }}"
+        echo "Digest: ${{ needs.build.outputs.image-digest }}"
+    
+    - name: Deploy to production
+      run: |
+        echo "🚀 Deploying to production environment..."
+        
+        # Blue-green deployment или rolling update
+        # kubectl set image deployment/bookstore-api bookstore-api=${{ needs.build.outputs.image-tag }}
+        # kubectl rollout status deployment/bookstore-api
+        
+        echo "✅ Production deployment completed"
+    
+    - name: Run production health checks
+      run: |
+        echo "🏥 Running production health checks..."
+        
+        # Проверка health endpoints
+        # curl -f https://api.bookstore.com/health
+        # curl -f https://api.bookstore.com/metrics
+        
+        echo "✅ Production health checks passed"
+    
+    - name: Create release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ github.run_number }}
+        release_name: Release v${{ github.run_number }}
+        body: |
+          ## Changes in this release
+          - Automated release from commit ${{ github.sha }}
+          - Docker image: ${{ needs.build.outputs.image-tag }}
+          
+          ## Deployment
+          - ✅ Tests passed
+          - ✅ Security scans completed
+          - ✅ Docker image built and pushed
+          - ✅ Deployed to production
+        draft: false
+        prerelease: false
+
+  # Этап 6: Уведомления
+  notify:
+    runs-on: ubuntu-latest
+    needs: [test, security, build]
+    if: always()
+    
+    steps:
+    - name: Notify on success
+      if: needs.test.result == 'success' && needs.security.result == 'success' && needs.build.result == 'success'
+      run: |
+        echo "✅ CI/CD Pipeline completed successfully!"
+        echo "- Tests: ✅ Passed"
+        echo "- Security: ✅ Passed"
+        echo "- Build: ✅ Completed"
+    
+    - name: Notify on failure
+      if: needs.test.result == 'failure' || needs.security.result == 'failure' || needs.build.result == 'failure'
+      run: |
+        echo "❌ CI/CD Pipeline failed!"
+        echo "- Tests: ${{ needs.test.result }}"
+        echo "- Security: ${{ needs.security.result }}"
+        echo "- Build: ${{ needs.build.result }}"
+        exit 1

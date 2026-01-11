@@ -1,0 +1,10 @@
+pytest
+pytest-asyncio
+pytest-cov
+pytest-mock
+httpx
+faker
+hypothesis
+factory-boy
+pytest-xdist
+pytest-html

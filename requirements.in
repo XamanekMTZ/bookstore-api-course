@@ -1,0 +1,4 @@
+# Core dependencies
+Flask==2.3.3
+psutil>=5.9.0
+pydantic-settings>=2.1.0
