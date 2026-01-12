@@ -261,3 +261,11 @@ node_modules/
 
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
+
+# Kiro IDE files
+.kiro/specs/
+.kiro/settings/
+
+# Archive and backup directories
+archive/
+*_backups/

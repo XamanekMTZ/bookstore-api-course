@@ -2,7 +2,7 @@ name: Performance Testing
 
 on:
   schedule:
-    # Запуск каждый день в 2:00 UTC
+    # Run every day at 2:00 UTC
     - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
@@ -16,7 +16,7 @@ on:
         default: '5'
 
 jobs:
-  # Нагрузочное тестирование с Locust
+  # Load testing with Locust
   load-testing:
     runs-on: ubuntu-latest
     
@@ -43,8 +43,8 @@ jobs:
             wait_time = between(1, 3)
             
             def on_start(self):
-                """Выполняется при старте каждого пользователя"""
-                # Попытка аутентификации
+                """Executed at the start of each user"""
+                # Authentication attempt
                 response = self.client.post("/auth/login", data={
                     "username": "testuser",
                     "password": "password123"
@@ -55,30 +55,30 @@ jobs:
             
             @task(3)
             def view_books(self):
-                """Просмотр списка книг"""
+                """View books list"""
                 self.client.get("/api/v1/books/")
             
             @task(2)
             def view_book_details(self):
-                """Просмотр деталей книги"""
+                """View book details"""
                 book_id = random.randint(1, 10)
                 self.client.get(f"/api/v1/books/{book_id}")
             
             @task(1)
             def search_books(self):
-                """Поиск книг"""
+                """Search books"""
                 search_terms = ["python", "javascript", "data", "science", "fiction"]
                 term = random.choice(search_terms)
                 self.client.get(f"/api/v1/books/?q={term}")
             
             @task(1)
             def view_authors(self):
-                """Просмотр авторов"""
+                """View authors"""
                 self.client.get("/api/v1/authors/")
             
             @task(1)
             def health_check(self):
-                """Проверка здоровья сервиса"""
+                """Service health check"""
                 self.client.get("/health")
         EOF
     
@@ -118,14 +118,14 @@ jobs:
           echo "📈 Request Statistics:"
           head -10 performance-results_stats.csv
           
-          # Проверяем критерии производительности
+          # Check performance criteria
           AVG_RESPONSE_TIME=$(awk -F',' 'NR==2 {print $7}' performance-results_stats.csv)
           FAILURE_RATE=$(awk -F',' 'NR==2 {print $4}' performance-results_stats.csv)
           
           echo "⚡ Average Response Time: ${AVG_RESPONSE_TIME}ms"
           echo "❌ Failure Rate: ${FAILURE_RATE}%"
           
-          # Устанавливаем пороги
+          # Set thresholds
           if (( $(echo "$AVG_RESPONSE_TIME > 1000" | bc -l) )); then
             echo "⚠️ WARNING: Average response time exceeds 1000ms"
           fi
@@ -136,7 +136,7 @@ jobs:
           fi
         fi
 
-  # Мониторинг доступности
+  # Uptime monitoring
   uptime-monitoring:
     runs-on: ubuntu-latest
     
@@ -168,7 +168,7 @@ jobs:
         echo "This would typically connect to monitoring systems"
         echo "to check database response times, connection pools, etc."
 
-  # Анализ метрик приложения
+  # Application metrics analysis
   metrics-analysis:
     runs-on: ubuntu-latest
     
@@ -177,7 +177,7 @@ jobs:
       run: |
         echo "📊 Fetching application metrics..."
         
-        # В реальном сценарии здесь будет запрос к Prometheus/Grafana
+        # In real scenario here will be request to Prometheus/Grafana
         # curl -s "http://prometheus:9090/api/v1/query?query=http_requests_total"
         
         echo "Metrics that would be analyzed:"

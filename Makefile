@@ -10,9 +10,9 @@ help: ## Show this help message
 
 # Development
 install: ## Install all dependencies
-	pip install -r requirements.txt
-	pip install -r fastapi_requirements.txt
-	pip install -r testing_requirements.txt
+	pip install -r requirements/base.txt
+	pip install -r requirements/api.txt
+	pip install -r requirements/testing.txt
 
 dev: ## Start development server
 	python run_bookstore.py
@@ -55,63 +55,85 @@ clean: ## Clean up temporary files
 
 # Docker Development
 docker-build: ## Build Docker image
-	docker build -t bookstore-api:latest .
+	cd deployment/docker && docker build -t bookstore-api:latest .
 
 docker-dev: ## Start development environment with Docker
-	docker-compose up -d
+	cd deployment/docker && docker-compose up -d
 	@echo "API available at: http://localhost:8000"
 	@echo "Docs available at: http://localhost:8000/docs"
 
 docker-logs: ## Show Docker logs
-	docker-compose logs -f api
+	cd deployment/docker && docker-compose logs -f api
 
 docker-stop: ## Stop development environment
-	docker-compose down
+	cd deployment/docker && docker-compose down
 
 docker-clean: ## Clean up Docker resources
-	docker-compose down -v
+	cd deployment/docker && docker-compose down -v
 	docker system prune -f
 
 # Production Deployment
 deploy-prod: ## Deploy to production with Docker Compose
 	@echo "🚀 Deploying to production..."
 	@if [ ! -f .env ]; then echo "❌ .env file not found. Copy .env.production and configure it."; exit 1; fi
-	docker-compose -f docker-compose.prod.yml pull
-	docker-compose -f docker-compose.prod.yml up -d
+	cd deployment/docker && docker-compose -f docker-compose.prod.yml pull
+	cd deployment/docker && docker-compose -f docker-compose.prod.yml up -d
 	@echo "✅ Production deployment completed"
 	@echo "API: https://api.yourdomain.com"
 	@echo "Monitoring: https://monitoring.yourdomain.com"
 
 deploy-staging: ## Deploy to staging environment
 	@echo "🚀 Deploying to staging..."
-	ENVIRONMENT=staging docker-compose -f docker-compose.prod.yml up -d
+	cd deployment/docker && ENVIRONMENT=staging docker-compose -f docker-compose.prod.yml up -d
 	@echo "✅ Staging deployment completed"
 
 # Kubernetes
 k8s-deploy: ## Deploy to Kubernetes
 	@echo "🚀 Deploying to Kubernetes..."
-	cd k8s && ./deploy.sh
+	cd deployment/k8s && ./deploy.sh
 	@echo "✅ Kubernetes deployment completed"
 
 k8s-status: ## Check Kubernetes deployment status
-	cd k8s && ./deploy.sh status
+	cd deployment/k8s && ./deploy.sh status
 
 k8s-update: ## Update Kubernetes deployment
-	cd k8s && ./deploy.sh update
+	cd deployment/k8s && ./deploy.sh update
 
 k8s-delete: ## Delete Kubernetes deployment
-	cd k8s && ./deploy.sh delete
+	cd deployment/k8s && ./deploy.sh delete
 
-# Database
-db-migrate: ## Run database migrations
-	docker-compose exec api alembic upgrade head
+# Database & Migrations
+db-migrate: ## Run database migrations to latest version
+	python development/scripts/migrate.py upgrade
+
+db-migrate-info: ## Show current migration status
+	@echo "📊 Database Migration Status:"
+	@echo "============================"
+	python development/scripts/migrate.py status
+
+db-create-migration: ## Create new migration (requires MESSAGE env var)
+	@if [ -z "$(MESSAGE)" ]; then echo "❌ MESSAGE environment variable required (e.g., make db-create-migration MESSAGE='Add user table')"; exit 1; fi
+	python development/scripts/migrate.py create "$(MESSAGE)" --autogenerate
+
+db-downgrade: ## Downgrade database by one migration
+	python development/scripts/migrate.py downgrade
+
+db-downgrade-to: ## Downgrade to specific revision (requires REVISION env var)
+	@if [ -z "$(REVISION)" ]; then echo "❌ REVISION environment variable required (e.g., make db-downgrade-to REVISION=abc123)"; exit 1; fi
+	python development/scripts/migrate.py downgrade $(REVISION)
+
+db-history: ## Show migration history
+	python development/scripts/migrate.py history --verbose
+
+db-current: ## Show current migration version
+	python development/scripts/migrate.py status
 
 db-backup: ## Create database backup
-	docker-compose -f docker-compose.prod.yml run --rm backup
+	cd deployment/docker && docker-compose -f docker-compose.prod.yml run --rm backup
 
 db-restore: ## Restore database from backup (requires BACKUP_FILE env var)
 	@if [ -z "$(BACKUP_FILE)" ]; then echo "❌ BACKUP_FILE environment variable required"; exit 1; fi
-	docker-compose -f docker-compose.prod.yml exec db pg_restore -h localhost -U bookstore_user -d bookstore_prod --clean --if-exists $(BACKUP_FILE)
+	cd deployment/docker && docker-compose -f docker-compose.prod.yml exec db pg_restore -h localhost -U bookstore_user -d bookstore_prod --clean --if-exists $(BACKUP_FILE)
 
 # Monitoring
 monitor: ## Open monitoring dashboard
@@ -120,13 +142,13 @@ monitor: ## Open monitoring dashboard
 	@echo "Prometheus: https://monitoring.yourdomain.com/prometheus"
 
 logs: ## Show application logs
-	docker-compose -f docker-compose.prod.yml logs -f api
+	cd deployment/docker && docker-compose -f docker-compose.prod.yml logs -f api
 
 logs-nginx: ## Show Nginx logs
-	docker-compose -f docker-compose.prod.yml logs -f nginx
+	cd deployment/docker && docker-compose -f docker-compose.prod.yml logs -f nginx
 
 logs-db: ## Show database logs
-	docker-compose -f docker-compose.prod.yml logs -f db
+	cd deployment/docker && docker-compose -f docker-compose.prod.yml logs -f db
 
 # Health Checks
 health: ## Check application health
@@ -144,7 +166,7 @@ metrics: ## Show application metrics
 # Security
 security-scan: ## Run security scans
 	@echo "🔒 Running security scans..."
-	safety check -r requirements.txt -r fastapi_requirements.txt
+	safety check -r requirements/base.txt -r requirements/api.txt
 	bandit -r bookstore/ -f json -o security-report.json
 	@echo "✅ Security scan completed"
 
@@ -174,18 +196,18 @@ release: ## Create a new release
 
 # Utilities
 shell: ## Open shell in API container
-	docker-compose exec api bash
+	cd deployment/docker && docker-compose exec api bash
 
 db-shell: ## Open database shell
-	docker-compose exec db psql -U bookstore_user -d bookstore_prod
+	cd deployment/docker && docker-compose exec db psql -U bookstore_user -d bookstore_prod
 
 redis-shell: ## Open Redis shell
-	docker-compose exec redis redis-cli
+	cd deployment/docker && docker-compose exec redis redis-cli
 
 update-deps: ## Update Python dependencies
-	pip-compile --upgrade requirements.in
-	pip-compile --upgrade fastapi_requirements.in
-	pip-compile --upgrade testing_requirements.in
+	pip-compile --upgrade requirements/base.in
+	pip-compile --upgrade requirements/api.in
+	pip-compile --upgrade requirements/testing.in
 
 # Documentation
 docs: ## Generate API documentation

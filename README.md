@@ -11,7 +11,7 @@
 
 **Modern, production-ready book management system with complete DevOps pipeline**
 
-[🚀 Quick Start](#-quick-start) • [📖 Documentation](#-api-documentation) • [🐳 Docker](#-docker-deployment) • [☸️ Kubernetes](#️-kubernetes-deployment) • [🔧 Development](#-development)
+[🚀 Quick Start](#-quick-start) • [🗺️ Learning Roadmap](#️-learning-roadmap) • [📖 Documentation](#-api-documentation) • [🐳 Docker](#-docker-deployment) • [☸️ Kubernetes](#️-kubernetes-deployment) • [🔧 Development](#-development) • [🚀 Future Roadmap](#-future-roadmap)
 
 </div>
 
@@ -74,7 +74,8 @@ make dev
 ### Option 2: Docker Development
 ```bash
 # Start all services with Docker
-make docker-dev
+cd deployment/docker
+docker-compose up -d
 
 # API available at: http://localhost:8000
 # Docs available at: http://localhost:8000/docs
@@ -83,17 +84,241 @@ make docker-dev
 ### Option 3: Manual Setup
 ```bash
 # Install dependencies
-make install
+pip install -r requirements/base.txt -r requirements/api.txt
 
 # Setup environment
 cp .env.example .env
 
 # Run tests
-make test
+pytest tests/
 
 # Start development server
 python run_bookstore.py
 ```
+
+## 🗺️ Learning Roadmap
+
+Whether you're a beginner or experienced developer, this roadmap will guide you through using and understanding the BookStore API project.
+
+### 🎯 Choose Your Path
+
+<details>
+<summary><strong>🚀 Quick Explorer (5 minutes)</strong> - Just want to see it work?</summary>
+
+**Goal**: Get the API running and make your first request
+
+1. **Setup** (2 min)
+   ```bash
+   git clone <repository-url>
+   cd bookstore-api
+   ./scripts/setup-dev.sh
+   ```
+
+2. **Start** (1 min)
+   ```bash
+   make dev
+   ```
+
+3. **Explore** (2 min)
+   - Visit: http://localhost:8000/docs
+   - Try the `/health` endpoint
+   - Create a user via `/auth/register`
+   - Get books via `/api/v1/books/`
+
+**Next Steps**: Choose the "API User" or "Developer" path below
+</details>
+
+<details>
+<summary><strong>📱 API User (30 minutes)</strong> - Want to integrate with the API?</summary>
+
+**Goal**: Understand how to use the API in your applications
+
+1. **Authentication Flow** (10 min)
+   - Register a new user: `POST /auth/register`
+   - Login to get JWT token: `POST /auth/login`
+   - Use token in headers: `Authorization: Bearer <token>`
+   - 📖 Read: [Authentication Guide](docs/QUICK_START.md#authentication)
+
+2. **Core Operations** (15 min)
+   - List books with pagination: `GET /api/v1/books/?page=1&size=10`
+   - Search books: `GET /api/v1/books/?q=python`
+   - Get book details: `GET /api/v1/books/{id}`
+   - Add to reading list: `POST /api/v1/reading-lists/books/{id}`
+   - 📖 Read: [API Examples](examples/fastapi_cheatsheet.md)
+
+3. **Advanced Features** (5 min)
+   - Rate limiting and error handling
+   - Pagination and filtering
+   - Real-time health monitoring
+   - 📖 Read: [API Documentation](http://localhost:8000/docs)
+
+**Next Steps**: 
+- Build a client application
+- Explore monitoring endpoints
+- Check out the "Production User" path
+</details>
+
+<details>
+<summary><strong>👨‍💻 Developer (2 hours)</strong> - Want to understand and modify the code?</summary>
+
+**Goal**: Understand the codebase and make your first contribution
+
+1. **Code Structure** (30 min)
+   - Explore `bookstore/` directory structure
+   - Understand FastAPI app setup in `main.py`
+   - Review models in `models.py` and schemas in `schemas.py`
+   - Check routing in `routers/` directory
+   - 📖 Read: [Project Structure](docs/PROJECT_STRUCTURE_DETAILED.md)
+
+2. **Development Workflow** (45 min)
+   - Setup development environment: `make install`
+   - Run tests: `make test`
+   - Code formatting: `make format`
+   - Add a new endpoint (try adding a genre endpoint)
+   - 📖 Read: [Development Guide](docs/QUICK_START.md#development)
+
+3. **Testing Deep Dive** (30 min)
+   - Unit tests: `make test-unit`
+   - Integration tests: `make test-integration`
+   - Property-based tests: `make test-property`
+   - Add tests for your new endpoint
+   - 📖 Read: [Testing Guide](docs/TESTING_GUIDE.md)
+
+4. **Code Quality** (15 min)
+   - Linting: `make lint`
+   - Type checking: `mypy bookstore/`
+   - Security scan: `make security-scan`
+   - 📖 Read: [Code Examples](examples/)
+
+**Next Steps**:
+- Contribute to the project
+- Explore the "DevOps Engineer" path
+- Learn about production deployment
+</details>
+
+<details>
+<summary><strong>🏭 Production User (1 hour)</strong> - Ready to deploy to production?</summary>
+
+**Goal**: Deploy and monitor the API in production
+
+1. **Docker Deployment** (20 min)
+   - Local production stack: `make docker-prod`
+   - Environment configuration: Edit `.env.production`
+   - SSL setup and domain configuration
+   - 📖 Read: [Docker Guide](docs/DOCKER_SETUP.md)
+
+2. **Monitoring Setup** (25 min)
+   - Access Grafana dashboards
+   - Configure Prometheus metrics
+   - Setup log aggregation with Loki
+   - Health check endpoints
+   - 📖 Read: [Production Guide](docs/PRODUCTION_DEPLOYMENT.md)
+
+3. **Security & Backup** (15 min)
+   - Security headers and rate limiting
+   - Database backup procedures: `make db-backup`
+   - SSL certificate management
+   - 📖 Read: [Security Best Practices](docs/PRODUCTION_DEPLOYMENT.md#security)
+
+**Next Steps**:
+- Setup CI/CD pipeline
+- Explore Kubernetes deployment
+- Learn about scaling strategies
+</details>
+
+<details>
+<summary><strong>☸️ DevOps Engineer (3 hours)</strong> - Want to master the entire infrastructure?</summary>
+
+**Goal**: Understand and manage the complete DevOps pipeline
+
+1. **Containerization Mastery** (45 min)
+   - Multi-stage Dockerfile analysis
+   - Docker Compose for different environments
+   - Container security and optimization
+   - Registry management with GitHub Container Registry
+   - 📖 Read: [Docker DevOps Guide](docs/DOCKER_DEVOPS_GUIDE.md)
+
+2. **Kubernetes Deployment** (60 min)
+   - Deploy to Kubernetes: `make k8s-deploy`
+   - Understand manifests in `k8s/` directory
+   - Auto-scaling configuration
+   - Ingress and service mesh
+   - 📖 Read: [Kubernetes Manifests](k8s/)
+
+3. **CI/CD Pipeline** (45 min)
+   - GitHub Actions workflows in `.github/workflows/`
+   - Automated testing and security scanning
+   - Multi-environment deployment
+   - Release management
+   - 📖 Read: [CI/CD Setup](docs/CI_CD_SETUP.md)
+
+4. **Monitoring & Observability** (30 min)
+   - Prometheus metrics collection
+   - Grafana dashboard configuration
+   - Log aggregation with Loki and Promtail
+   - Alerting and incident response
+   - 📖 Read: [Monitoring Setup](grafana/)
+
+**Next Steps**:
+- Customize for your infrastructure
+- Add additional monitoring
+- Implement advanced deployment strategies
+</details>
+
+<details>
+<summary><strong>🎓 Learning Path (Ongoing)</strong> - Want to learn modern Python and DevOps?</summary>
+
+**Goal**: Use this project as a learning resource for modern development practices
+
+1. **Python & FastAPI Fundamentals**
+   - 📖 [FastAPI Cheatsheet](examples/fastapi_cheatsheet.md)
+   - 📖 [OOP Practice](examples/oop_practice.py)
+   - 📖 [Type Hints Advanced](examples/type_hints_advanced.py)
+   - 📖 [Decorators Guide](examples/decorators_advanced.py)
+
+2. **Testing Methodologies**
+   - 📖 [Testing Cheatsheet](examples/testing_cheatsheet.md)
+   - 📖 [Property-Based Testing](tests/test_property_based.py)
+   - 📖 [Performance Testing](tests/test_performance.py)
+   - 📖 [Integration Testing](tests/test_api_integration.py)
+
+3. **DevOps & Infrastructure**
+   - 📖 [Docker Best Practices](docs/DOCKER_DEVOPS_GUIDE.md)
+   - 📖 [Kubernetes Deployment](k8s/)
+   - 📖 [CI/CD Pipelines](.github/workflows/)
+   - 📖 [Monitoring & Observability](grafana/)
+
+4. **Production Readiness**
+   - 📖 [Security Practices](docs/PRODUCTION_DEPLOYMENT.md)
+   - 📖 [Performance Optimization](docs/TESTING_GUIDE.md)
+   - 📖 [Backup & Recovery](scripts/backup-script.sh)
+   - 📖 [Health Monitoring](scripts/production-health-check.sh)
+
+**Learning Resources**:
+- 📚 [Learning Materials](docs/LEARNING_MATERIALS.md)
+- 🎯 [Task System Examples](examples/task_system.py)
+- 📊 [Performance Analysis](tests/test_performance.py)
+</details>
+
+### 🎯 Quick Decision Matrix
+
+| Your Goal | Time Available | Recommended Path |
+|-----------|----------------|------------------|
+| "Just show me it works" | 5 minutes | 🚀 Quick Explorer |
+| "I want to use this API" | 30 minutes | 📱 API User |
+| "I want to modify the code" | 2 hours | 👨‍💻 Developer |
+| "I want to deploy this" | 1 hour | 🏭 Production User |
+| "I want to master DevOps" | 3 hours | ☸️ DevOps Engineer |
+| "I want to learn from this" | Ongoing | 🎓 Learning Path |
+
+### 🆘 Need Help?
+
+- **🐛 Found a bug?** → [Report it](https://github.com/your-org/bookstore-api/issues)
+- **❓ Have a question?** → Check [docs/](docs/) or [examples/](examples/)
+- **💡 Want a feature?** → [Request it](https://github.com/your-org/bookstore-api/issues)
+- **🤝 Want to contribute?** → See [Contributing](#-contributing) section
+
+---
 
 ## 📖 API Documentation
 
@@ -147,6 +372,7 @@ GET /info       # Application information
 ### Local Development
 ```bash
 # Start development environment
+cd deployment/docker
 docker-compose up -d
 
 # View logs
@@ -163,7 +389,8 @@ cp .env.production .env
 # Edit .env with your production values
 
 # Deploy to production
-make deploy-prod
+cd deployment/docker
+docker-compose -f docker-compose.prod.yml up -d
 
 # Check status
 docker-compose -f docker-compose.prod.yml ps
@@ -183,18 +410,19 @@ docker-compose -f docker-compose.prod.yml ps
 ### Quick Deploy
 ```bash
 # Deploy to Kubernetes cluster
-make k8s-deploy
+cd deployment/k8s
+./deploy.sh
 
 # Check deployment status
-make k8s-status
+./deploy.sh status
 
 # Update deployment
-make k8s-update
+./deploy.sh update
 ```
 
 ### Manual Kubernetes Setup
 ```bash
-cd k8s/
+cd deployment/k8s/
 
 # Deploy all components
 kubectl apply -f namespace.yaml
@@ -333,24 +561,42 @@ make health
 ```
 bookstore-api/
 ├── 📁 bookstore/              # Main application code
+│   ├── routers/               # API route handlers
+│   ├── models.py              # Database models
+│   ├── schemas.py             # Pydantic schemas
+│   ├── auth.py                # Authentication logic
+│   ├── database.py            # Database configuration
+│   └── main.py                # FastAPI application
 ├── 📁 tests/                  # Comprehensive test suite
-├── 📁 config/                 # Configuration files (nginx, prometheus, etc.)
-├── 📁 database/               # SQL files and database schemas
-├── 📁 scripts/                # Utility and deployment scripts
-├── 📁 .github/workflows/      # CI/CD pipelines
-├── 📁 k8s/                    # Kubernetes manifests
-├── 📁 grafana/                # Monitoring dashboards
-├── 📁 docs/                   # Documentation and guides
-├── 📁 examples/               # Code examples and tutorials
-├── 🐳 Dockerfile              # Container image
-├── 🐳 docker-compose.yml      # Local development
-├── 🐳 docker-compose.prod.yml # Production stack
+│   ├── test_unit_basic.py     # Unit tests
+│   ├── test_api_integration.py # Integration tests
+│   ├── test_property_based.py # Property-based tests
+│   └── test_performance.py    # Performance tests
+├── 📁 deployment/             # Deployment configurations
+│   ├── docker/                # Docker configurations
+│   ├── k8s/                   # Kubernetes manifests
+│   ├── config/                # Environment configurations
+│   └── monitoring/            # Monitoring dashboards
+├── 📁 development/            # Development tools
+│   ├── scripts/               # Utility scripts
+│   ├── examples/              # Code examples and tutorials
+│   └── tools/                 # Development utilities
+├── 📁 documentation/          # Project documentation
+│   ├── guides/                # Step-by-step guides
+│   ├── api/                   # API documentation
+│   └── project/               # Project summaries
+├── 📁 requirements/           # Python dependencies
+│   ├── base.txt               # Core dependencies
+│   ├── api.txt                # FastAPI dependencies
+│   └── testing.txt            # Testing dependencies
+├── 📁 alembic/                # Database migrations
+├── 📁 archive/                # Archived files
+├── 🐳 Dockerfile              # → deployment/docker/
 ├── ⚙️ Makefile                # Development commands
-├── 📋 requirements.txt        # Python dependencies
+├── 📋 alembic.ini             # Migration configuration
 ├── 📚 README.md               # This file
 ├── 📚 README_RU.md            # Russian documentation
-├── 📄 LICENSE                 # MIT License
-└── 📄 CHANGELOG.md            # Version history
+└── 📄 LICENSE                 # MIT License
 ```
 
 ## 🚀 Deployment Options
@@ -401,6 +647,121 @@ make db-restore BACKUP_FILE=/path/to/backup.sql
 # List available backups
 ls -la backups/
 ```
+
+## 🚀 Future Roadmap
+
+### 🎯 Planned Features
+
+<details>
+<summary><strong>📅 Short Term (Next 2-4 weeks)</strong></summary>
+
+**Core Features**
+- [ ] **Advanced Search** - Full-text search with Elasticsearch
+- [ ] **Book Recommendations** - ML-based recommendation engine
+- [ ] **User Preferences** - Customizable user settings and themes
+- [ ] **Book Categories** - Enhanced categorization and tagging
+- [ ] **Wishlist Management** - Advanced wishlist features
+
+**API Enhancements**
+- [ ] **GraphQL Support** - Alternative to REST API
+- [ ] **Webhooks** - Event-driven notifications
+- [ ] **Bulk Operations** - Batch create/update/delete
+- [ ] **Advanced Filtering** - Complex query capabilities
+- [ ] **API Versioning** - v2 API with enhanced features
+
+**Performance & Scalability**
+- [ ] **Database Sharding** - Horizontal database scaling
+- [ ] **CDN Integration** - Static asset optimization
+- [ ] **Advanced Caching** - Multi-layer caching strategy
+- [ ] **Connection Pooling** - Optimized database connections
+</details>
+
+<details>
+<summary><strong>🎯 Medium Term (1-3 months)</strong></summary>
+
+**Advanced Features**
+- [ ] **Multi-tenancy** - Support for multiple bookstore instances
+- [ ] **Real-time Features** - WebSocket support for live updates
+- [ ] **Mobile API** - Optimized endpoints for mobile apps
+- [ ] **Social Features** - User interactions and book sharing
+- [ ] **Analytics Dashboard** - Business intelligence and reporting
+
+**Infrastructure**
+- [ ] **Multi-region Deployment** - Global availability
+- [ ] **Advanced Monitoring** - APM and distributed tracing
+- [ ] **Disaster Recovery** - Cross-region backup and failover
+- [ ] **Service Mesh** - Istio integration for microservices
+- [ ] **GitOps** - ArgoCD for automated deployments
+
+**Security & Compliance**
+- [ ] **OAuth2 Integration** - Social login support
+- [ ] **RBAC System** - Role-based access control
+- [ ] **Audit Logging** - Comprehensive audit trails
+- [ ] **GDPR Compliance** - Data privacy and protection
+- [ ] **SOC 2 Compliance** - Security and availability standards
+</details>
+
+<details>
+<summary><strong>🌟 Long Term (3-6 months)</strong></summary>
+
+**Microservices Architecture**
+- [ ] **Service Decomposition** - Break into microservices
+- [ ] **Event Sourcing** - Event-driven architecture
+- [ ] **CQRS Pattern** - Command Query Responsibility Segregation
+- [ ] **Saga Pattern** - Distributed transaction management
+- [ ] **API Gateway** - Centralized API management
+
+**AI & Machine Learning**
+- [ ] **Recommendation Engine** - Personalized book suggestions
+- [ ] **Sentiment Analysis** - Review sentiment scoring
+- [ ] **Price Optimization** - Dynamic pricing algorithms
+- [ ] **Fraud Detection** - Automated fraud prevention
+- [ ] **Content Moderation** - AI-powered content filtering
+
+**Advanced DevOps**
+- [ ] **Chaos Engineering** - Resilience testing
+- [ ] **Canary Deployments** - Gradual rollout strategies
+- [ ] **Feature Flags** - Dynamic feature management
+- [ ] **Infrastructure as Code** - Terraform automation
+- [ ] **Policy as Code** - Open Policy Agent integration
+</details>
+
+### 🤝 Community Contributions
+
+**How You Can Help:**
+- 🐛 **Bug Reports** - Help us identify and fix issues
+- 💡 **Feature Requests** - Suggest new functionality
+- 📝 **Documentation** - Improve guides and examples
+- 🧪 **Testing** - Add test cases and scenarios
+- 🎨 **UI/UX** - Design improvements and user experience
+- 🔧 **DevOps** - Infrastructure and deployment improvements
+
+**Contribution Areas:**
+- **Backend Development** - Python, FastAPI, SQLAlchemy
+- **Frontend Development** - React, Vue.js, or Angular integration
+- **Mobile Development** - React Native or Flutter apps
+- **DevOps & Infrastructure** - Kubernetes, Docker, CI/CD
+- **Data Science** - Analytics, ML models, recommendations
+- **Security** - Penetration testing, security audits
+- **Documentation** - Technical writing, tutorials, guides
+
+### 📊 Success Metrics
+
+**Technical Goals:**
+- ⚡ **Performance**: < 100ms average response time
+- 🔄 **Availability**: 99.99% uptime
+- 📈 **Scalability**: Handle 10,000+ concurrent users
+- 🛡️ **Security**: Zero critical vulnerabilities
+- 🧪 **Quality**: 98%+ test coverage
+
+**Community Goals:**
+- ⭐ **GitHub Stars**: 1,000+ stars
+- 🤝 **Contributors**: 50+ active contributors
+- 📚 **Documentation**: Complete guides for all features
+- 🌍 **Adoption**: Used in 100+ production environments
+- 🎓 **Education**: Teaching resource in 10+ courses
+
+---
 
 ## 🤝 Contributing
 

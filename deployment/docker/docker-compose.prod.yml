@@ -244,7 +244,7 @@ networks:
       config:
         - subnet: 172.20.0.0/16
 
-# Health check для всего стека
+# Health check for the entire stack
 x-healthcheck-defaults: &healthcheck-defaults
   interval: 30s
   timeout: 10s

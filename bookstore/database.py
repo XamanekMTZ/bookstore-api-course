@@ -1,8 +1,10 @@
 """
-Database configuration using new settings system
+Database configuration using new settings system with Alembic migrations
 """
 
-from sqlalchemy import create_engine
+import os
+import sys
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from .models import Base
@@ -41,8 +43,99 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def create_tables():
-    """Create all tables"""
+    """
+    Create all tables (legacy method - use Alembic migrations instead)
+    
+    This method is kept for backward compatibility but should not be used
+    in production. Use 'alembic upgrade head' instead.
+    """
     Base.metadata.create_all(bind=engine)
+
+
+def run_migrations():
+    """
+    Run Alembic migrations programmatically
+    
+    This function runs Alembic migrations from within the application.
+    It's useful for automated deployments and testing.
+    """
+    try:
+        from alembic.config import Config
+        from alembic import command
+        
+        # Get the directory where this file is located
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        # Go up one level to the project root
+        project_root = os.path.dirname(current_dir)
+        # Path to alembic.ini
+        alembic_cfg_path = os.path.join(project_root, "alembic.ini")
+        
+        if not os.path.exists(alembic_cfg_path):
+            print(f"Warning: Alembic config not found at {alembic_cfg_path}")
+            print("Falling back to create_all() method")
+            create_tables()
+            return
+        
+        # Create Alembic configuration
+        alembic_cfg = Config(alembic_cfg_path)
+        
+        # Run migrations to the latest version
+        print("Running database migrations...")
+        command.upgrade(alembic_cfg, "head")
+        print("Database migrations completed successfully!")
+        
+    except ImportError:
+        print("Alembic not installed, falling back to create_all() method")
+        create_tables()
+    except Exception as e:
+        print(f"Error running migrations: {e}")
+        print("Falling back to create_all() method")
+        create_tables()
+
+
+def get_migration_info():
+    """
+    Get current migration information
+    
+    Returns information about the current database migration state.
+    """
+    try:
+        from alembic.config import Config
+        from alembic import command
+        from alembic.runtime.environment import EnvironmentContext
+        from alembic.script import ScriptDirectory
+        import io
+        
+        # Get the directory where this file is located
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(current_dir)
+        alembic_cfg_path = os.path.join(project_root, "alembic.ini")
+        
+        if not os.path.exists(alembic_cfg_path):
+            return {"status": "no_alembic", "message": "Alembic not configured"}
+        
+        alembic_cfg = Config(alembic_cfg_path)
+        script = ScriptDirectory.from_config(alembic_cfg)
+        
+        # Capture current revision
+        def get_current_revision():
+            with engine.connect() as connection:
+                context = EnvironmentContext(alembic_cfg, script)
+                context.configure(connection=connection)
+                return context.get_current_revision()
+        
+        current_rev = get_current_revision()
+        head_rev = script.get_current_head()
+        
+        return {
+            "status": "ok",
+            "current_revision": current_rev,
+            "head_revision": head_rev,
+            "up_to_date": current_rev == head_rev
+        }
+        
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 
 def get_db():
@@ -55,11 +148,12 @@ def get_db():
 
 
 def init_db():
-    """Initialize DB with test data"""
+    """Initialize DB with migrations and test data"""
     from .models import User, Author, Genre, Book
     from .auth import get_password_hash
     
-    create_tables()
+    # Run migrations instead of create_all()
+    run_migrations()
     
     # Skip test data creation in production
     if settings.is_production:
@@ -205,8 +299,16 @@ def get_database_info():
     """Get database information for health check"""
     try:
         db = SessionLocal()
-        result = db.execute("SELECT 1").scalar()
+        result = db.execute(text("SELECT 1")).scalar()
         db.close()
-        return {"status": "healthy", "connection": "ok"}
+        
+        # Get migration info
+        migration_info = get_migration_info()
+        
+        return {
+            "status": "healthy", 
+            "connection": "ok",
+            "migrations": migration_info
+        }
     except Exception as e:
         return {"status": "unhealthy", "error": str(e)}

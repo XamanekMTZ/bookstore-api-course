@@ -2,12 +2,12 @@ name: Dependency Management
 
 on:
   schedule:
-    # Запуск каждый понедельник в 9:00 UTC
+    # Run every Monday at 9:00 UTC
     - cron: '0 9 * * 1'
   workflow_dispatch:
 
 jobs:
-  # Обновление зависимостей Python
+  # Update Python dependencies
   update-python-deps:
     runs-on: ubuntu-latest
     
@@ -29,7 +29,7 @@ jobs:
     
     - name: Update requirements
       run: |
-        # Обновляем основные зависимости
+        # Update main dependencies
         pip-compile --upgrade requirements.in
         pip-compile --upgrade fastapi_requirements.in
         pip-compile --upgrade testing_requirements.in
@@ -66,7 +66,7 @@ jobs:
         branch: update-dependencies
         delete-branch: true
 
-  # Сканирование уязвимостей в Docker образе
+  # Docker image vulnerability scanning
   security-scan:
     runs-on: ubuntu-latest
     
@@ -98,7 +98,7 @@ jobs:
         image: bookstore-api:security-scan
         args: --severity-threshold=high
 
-  # Проверка лицензий
+  # License check
   license-check:
     runs-on: ubuntu-latest
     
